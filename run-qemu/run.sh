@@ -104,6 +104,25 @@ fi
 
 foldable end shutdown
 
+# Try to collect json summary from VM
+if [[ -n ${KERNEL_TEST} && ${KERNEL_TEST} =~ test_progs* ]]
+then
+    guestfish --ro -a "$IMG" -i download "/${KERNEL_TEST}.json" "${KERNEL_TEST}.json"
+    if [ $? ]
+    then
+        ## Job summary
+        "${GITHUB_ACTION_PATH}/../run-vmtest/print_test_summary.py" -s "${GITHUB_STEP_SUMMARY}" -j "${KERNEL_TEST}.json"
+    fi
+fi
+
+# Try to collect $IMG:/command_output to OUTPUT_DIR
+if [[ -n "${OUTPUT_DIR}" ]]
+then
+    mkdir -p "${OUTPUT_DIR}"
+    guestfish --ro --add "$IMG" --inspector tar-out /command_output/ - \
+        | tar --extract --file - --directory="${OUTPUT_DIR}"
+fi
+
 # Final summary - Don't use a fold, keep it visible
 echo -e "\033[1;33mTest Results:\033[0m"
 echo -e "$exitfile" | while read result; do

@@ -1,5 +1,5 @@
-name: 'run qemu'
-description: 'Run qemu with given rootfs and print summary'
+name: 'run vmtest'
+description: 'Run vmtest and print summary'
 inputs:
   arch:
     description: 'arch'
@@ -27,14 +27,29 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: install qemu tools
+    - name: Find kernel
+      id: find-kernel
+      shell: bash
+      run: |
+        BUILDDIR=$(realpath kbuild-output)
+        vmlinuz="$BUILDDIR/$(KBUILD_OUTPUT="${BUILDDIR}" make -C "${{ inputs.kernel-root }}" -s image_name)"
+        cp "$vmlinuz" ${{ inputs.vmlinuz }}
+    - name: Download vmtest
+      shell: bash
+      # FIXME: move to proper release
+      run: |
+        curl -L https://github.com/chantra/danobi-vmtest/releases/download/v2.2.0/vmtest-$(uname -m) > /usr/bin/vmtest && chmod 755 /usr/bin/vmtest
+    - name: install qemu tools and selftest dependencies
       shell: bash
       run: |
         source "${GITHUB_ACTION_PATH}/../helpers.sh"
         foldable start install_qemu "Installing QEMU tools"
-        sudo apt-get update && sudo apt-get install -y cpu-checker qemu-kvm qemu-utils qemu-system-x86 qemu-system-s390x qemu-system-arm
+        # need gawk to support `--field-separator`
+        sudo apt-get update && sudo apt-get install -y cpu-checker qemu-kvm qemu-utils qemu-system-x86 qemu-system-s390x qemu-system-arm qemu-guest-agent \
+          ethtool keyutils iptables \
+          gawk
         foldable end install_qemu
-    - name: test
+    - name: Run vmtest
       shell: bash
       env:
         VMLINUZ: ${{ inputs.vmlinuz }}
@@ -43,5 +58,7 @@ runs:
         MAX_CPU: ${{ inputs.max-cpu }}
         KERNEL_TEST: ${{ inputs.kernel-test }}
         OUTPUT_DIR: ${{ inputs.output-dir }}
+        PROJECT_NAME: "/mnt/vmtest"
       run: |
-        ARCH="${{ inputs.arch }}" ${GITHUB_ACTION_PATH}/run.sh
+        ${GITHUB_ACTION_PATH}/run.sh
+

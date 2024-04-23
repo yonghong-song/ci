@@ -44,6 +44,9 @@ function qemu_static() {
     # Given a Debian architecture find the location of the matching
     # qemu-${gnu_arch}-static binary.
     gnu_arch=$(debian_to_gnu "${1}")
+    if [ "$deb_arch" == "ppc64el" ]; then
+	    gnu_arch="ppc64le"
+    fi
     echo "qemu-${gnu_arch}-static"
 }
 
@@ -135,7 +138,7 @@ set -x
 
 # Create a working directory and schedule its deletion.
 root=$(mktemp -d -p "$PWD")
-trap 'rm -r "$root"' EXIT
+trap '[[ "$?" -eq "0" ]] && rm -r "$root"' EXIT
 
 # Install packages.
 packages=(
@@ -156,6 +159,7 @@ packages=$(IFS=, && echo "${packages[*]}")
 
 # Stage 1
 debootstrap --include="$packages" \
+    --components=main,universe \
     --foreign \
     --variant=minbase \
     --arch="${deb_arch}" \

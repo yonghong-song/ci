@@ -44,22 +44,7 @@ llvm_default_version() {
 
 # No arguments
 llvm_latest_version() {
-  echo "17"
-}
-
-# $1 - toolchain name
-llvm_version() {
-  local toolchain="$1"
-  local toolchain_name="$(echo $toolchain | cut -d '-' -f 1)"
-  local toolchain_version="$(echo $toolchain | cut -d '-' -f 2)"
-
-  if [ "$toolchain_name" == "llvm" ]; then
-    echo "$toolchain_version"
-    return 0
-  else
-    llvm_default_version
-    return 1
-  fi
+  echo "19"
 }
 
 # No arguments
@@ -69,4 +54,41 @@ kernel_build_make_jobs() {
   smp=$((4*$(nproc)))
   MAX_MAKE_JOBS=${MAX_MAKE_JOBS:-$smp}
   echo $(( smp > MAX_MAKE_JOBS ? MAX_MAKE_JOBS : smp ))
+}
+
+# Convert a platform (as returned by uname -m) to the kernel
+# arch (as expected by ARCH= env).
+platform_to_kernel_arch() {
+  case $1 in
+    s390x)
+      echo "s390"
+      ;;
+    aarch64)
+      echo "arm64"
+      ;;
+    riscv64)
+      echo "riscv"
+      ;;
+    x86_64)
+      echo "x86"
+      ;;
+    *)
+      echo "$1"
+      ;;
+  esac
+}
+
+# Convert a platform (as returned by uname -m) to its debian equivalent.
+platform_to_deb_arch() {
+  case $1 in
+    aarch64)
+      echo "arm64"
+      ;;
+    x86_64)
+      echo "amd64"
+      ;;
+    *)
+      echo "$1"
+      ;;
+  esac
 }
